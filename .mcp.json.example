@@ -1,0 +1,11 @@
+{
+  "atlassian-api-key": {
+    "command": "node",
+    "args": ["${CLAUDE_PLUGIN_ROOT}/mcp-server/index.js"],
+    "env": {
+      "JIRA_URL": "https://your-domain.atlassian.net",
+      "JIRA_EMAIL": "your-email@company.com",
+      "JIRA_API_TOKEN": "your-api-token-here"
+    }
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "name": "atlassian-api",
+  "version": "1.0.0",
+  "description": "Connect to Atlassian products (Jira, Confluence) using API key authentication. Search and create issues, access documentation, manage sprints, and integrate your development workflow with Atlassian's collaboration tools.",
+  "author": {
+    "name": "Timothy Schwarz",
+    "email": "timothy.schwarz@qvc.com"
+  }
+}
