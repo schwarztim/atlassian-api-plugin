@@ -4,7 +4,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js Version](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen)](https://nodejs.org/)
-[![MCP SDK](https://img.shields.io/badge/MCP%20SDK-0.5.0-blue)](https://modelcontextprotocol.io/)
+[![MCP SDK](https://img.shields.io/badge/MCP%20SDK-1.25.2-blue)](https://modelcontextprotocol.io/)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-lightgrey)](https://github.com/schwarztim/atlassian-api-plugin)
 
