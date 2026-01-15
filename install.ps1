@@ -82,20 +82,22 @@ function Install-Plugin {
         Pop-Location
     }
 
-    # Step 3: Check for existing configuration
-    if (Test-Path ".mcp.json") {
-        Write-Warning "Configuration file .mcp.json already exists"
+    # Step 3: Check for existing global configuration
+    $globalMcpConfig = Join-Path $env:USERPROFILE ".claude\mcp.json"
+    $pluginDir = Split-Path -Parent $PSCommandPath
+
+    if ((Test-Path $globalMcpConfig) -and (Select-String -Path $globalMcpConfig -Pattern "atlassian-api-key" -Quiet)) {
+        Write-Warning "Atlassian plugin already configured globally"
         $reply = Read-Host "Do you want to reconfigure? (y/N)"
         if ($reply -ne 'y' -and $reply -ne 'Y') {
             Write-Step "Skipping configuration"
-        }
-        else {
-            Remove-Item ".mcp.json"
+            Write-Success "Installation complete - plugin already configured"
+            exit 0
         }
     }
 
-    # Step 4: Create configuration
-    if (-not (Test-Path ".mcp.json")) {
+    # Step 4: Create global configuration
+    if (-not (Test-Path $globalMcpConfig) -or ((Get-Item $globalMcpConfig).Length -eq 0)) {
         Write-Step "Creating configuration..."
         Write-Host ""
         Write-Host "You'll need:" -ForegroundColor Yellow
@@ -124,11 +126,18 @@ function Install-Plugin {
             [Runtime.InteropServices.Marshal]::SecureStringToBSTR($jiraApiToken)
         )
 
-        # Create configuration file
+        # Ensure global config directory exists
+        $configDir = Split-Path -Parent $globalMcpConfig
+        if (-not (Test-Path $configDir)) {
+            New-Item -ItemType Directory -Path $configDir -Force | Out-Null
+        }
+
+        # Create global configuration file
+        $mcpServerPath = Join-Path $pluginDir "mcp-server\index.js"
         $config = @{
             "atlassian-api-key" = @{
                 "command" = "node"
-                "args"    = @('${CLAUDE_PLUGIN_ROOT}/mcp-server/index.js')
+                "args"    = @($mcpServerPath)
                 "env"     = @{
                     "JIRA_URL"       = $jiraUrl
                     "JIRA_EMAIL"     = $jiraEmail
@@ -137,8 +146,9 @@ function Install-Plugin {
             }
         } | ConvertTo-Json -Depth 10
 
-        $config | Out-File -FilePath ".mcp.json" -Encoding UTF8
-        Write-Success "Configuration created"
+        $config | Out-File -FilePath $globalMcpConfig -Encoding UTF8
+        Write-Success "Global configuration created at ~/.claude/mcp.json"
+        Write-Success "Atlassian tools will be available in ALL directories"
     }
 
     # Step 5: Test connection
@@ -160,17 +170,20 @@ function Install-Plugin {
     Write-Host "║  Installation Complete! 🎉                 ║" -ForegroundColor Green
     Write-Host "╚════════════════════════════════════════════╝" -ForegroundColor Green
     Write-Host ""
+    Write-Host "✓ Atlassian tools are now available GLOBALLY" -ForegroundColor Green
+    Write-Host "  You can use them from any directory!"
+    Write-Host ""
     Write-Host "Next steps:"
-    Write-Host "  1. Start Claude Code in this directory:"
+    Write-Host "  1. Restart Claude Code (or start from any directory):"
     Write-Host "     claude" -ForegroundColor Blue
     Write-Host ""
-    Write-Host "  2. Try some commands:"
+    Write-Host "  2. Try some commands from anywhere:"
     Write-Host '     "Show me my Jira issues"' -ForegroundColor Blue
     Write-Host '     "Search Confluence for documentation"' -ForegroundColor Blue
     Write-Host "     /search-jira my high priority bugs" -ForegroundColor Blue
     Write-Host ""
+    Write-Host "Configuration: ~/.claude/mcp.json"
     Write-Host "Documentation: README.md"
-    Write-Host "Test plugin: .\test-plugin.ps1"
     Write-Host ""
 }
 

@@ -72,20 +72,24 @@ main() {
     fi
     cd ..
 
-    # Step 3: Check for existing configuration
-    if [ -f ".mcp.json" ]; then
-        print_warning "Configuration file .mcp.json already exists"
+    # Step 3: Check for existing global configuration
+    GLOBAL_MCP_CONFIG="$HOME/.claude/mcp.json"
+    PLUGIN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+    if [ -f "$GLOBAL_MCP_CONFIG" ] && grep -q "atlassian-api-key" "$GLOBAL_MCP_CONFIG" 2>/dev/null; then
+        print_warning "Atlassian plugin already configured globally"
         read -p "Do you want to reconfigure? (y/N): " -n 1 -r
         echo
         if [[ ! $REPLY =~ ^[Yy]$ ]]; then
             print_step "Skipping configuration"
-        else
-            rm .mcp.json
+            print_success "Installation complete - plugin already configured"
+            exit 0
         fi
     fi
 
-    # Step 4: Create configuration
-    if [ ! -f ".mcp.json" ]; then
+    # Step 4: Create global configuration
+    RECONFIGURE=false
+    if [ ! -f "$GLOBAL_MCP_CONFIG" ] || [ ! -s "$GLOBAL_MCP_CONFIG" ]; then
         print_step "Creating configuration..."
         echo ""
         echo -e "${YELLOW}You'll need:${NC}"
@@ -112,12 +116,34 @@ main() {
         read -sp "Paste your API token: " JIRA_API_TOKEN
         echo ""
 
-        # Create configuration file
-        cat > .mcp.json << EOF
+        # Ensure global config directory exists
+        mkdir -p "$(dirname "$GLOBAL_MCP_CONFIG")"
+
+        # Create or update global configuration file
+        if [ -f "$GLOBAL_MCP_CONFIG" ] && [ -s "$GLOBAL_MCP_CONFIG" ]; then
+            # Merge with existing config using jq if available, otherwise manual merge
+            if command_exists jq; then
+                TEMP_CONFIG=$(mktemp)
+                jq --arg path "$PLUGIN_DIR/mcp-server/index.js" \
+                   --arg url "$JIRA_URL" \
+                   --arg email "$JIRA_EMAIL" \
+                   --arg token "$JIRA_API_TOKEN" \
+                   '. + {"atlassian-api-key": {"command": "node", "args": [$path], "env": {"JIRA_URL": $url, "JIRA_EMAIL": $email, "JIRA_API_TOKEN": $token}}}' \
+                   "$GLOBAL_MCP_CONFIG" > "$TEMP_CONFIG"
+                mv "$TEMP_CONFIG" "$GLOBAL_MCP_CONFIG"
+            else
+                # Fallback: backup and warn user
+                cp "$GLOBAL_MCP_CONFIG" "${GLOBAL_MCP_CONFIG}.backup"
+                print_warning "Backed up existing config to ${GLOBAL_MCP_CONFIG}.backup"
+                print_warning "Please manually merge Atlassian config into $GLOBAL_MCP_CONFIG"
+            fi
+        else
+            # Create new global config
+            cat > "$GLOBAL_MCP_CONFIG" << EOF
 {
   "atlassian-api-key": {
     "command": "node",
-    "args": ["\${CLAUDE_PLUGIN_ROOT}/mcp-server/index.js"],
+    "args": ["${PLUGIN_DIR}/mcp-server/index.js"],
     "env": {
       "JIRA_URL": "${JIRA_URL}",
       "JIRA_EMAIL": "${JIRA_EMAIL}",
@@ -126,7 +152,9 @@ main() {
   }
 }
 EOF
-        print_success "Configuration created"
+        fi
+        print_success "Global configuration created at ~/.claude/mcp.json"
+        print_success "Atlassian tools will be available in ALL directories"
     fi
 
     # Step 5: Test connection
@@ -144,17 +172,20 @@ EOF
     echo -e "${GREEN}║  Installation Complete! 🎉                 ║${NC}"
     echo -e "${GREEN}╚════════════════════════════════════════════╝${NC}"
     echo ""
+    echo -e "${GREEN}✓ Atlassian tools are now available GLOBALLY${NC}"
+    echo "  You can use them from any directory!"
+    echo ""
     echo "Next steps:"
-    echo "  1. Start Claude Code in this directory:"
+    echo "  1. Restart Claude Code (or start from any directory):"
     echo -e "     ${BLUE}claude${NC}"
     echo ""
-    echo "  2. Try some commands:"
+    echo "  2. Try some commands from anywhere:"
     echo -e "     ${BLUE}\"Show me my Jira issues\"${NC}"
     echo -e "     ${BLUE}\"Search Confluence for documentation\"${NC}"
     echo -e "     ${BLUE}/search-jira my high priority bugs${NC}"
     echo ""
+    echo "Configuration: ~/.claude/mcp.json"
     echo "Documentation: README.md"
-    echo "Test plugin: ./test-plugin.sh"
     echo ""
 }
 

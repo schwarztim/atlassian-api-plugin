@@ -1,7 +1,8 @@
 {
+  "comment": "Add this configuration to ~/.claude/mcp.json for global access from any directory",
   "atlassian-api-key": {
     "command": "node",
-    "args": ["${CLAUDE_PLUGIN_ROOT}/mcp-server/index.js"],
+    "args": ["/absolute/path/to/atlassian-api-plugin/mcp-server/index.js"],
     "env": {
       "JIRA_URL": "https://your-domain.atlassian.net",
       "JIRA_EMAIL": "your-email@company.com",

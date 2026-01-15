@@ -123,8 +123,10 @@ The installation script will:
 1. ✅ Check Node.js version
 2. ✅ Install dependencies
 3. ✅ Guide you through API token setup
-4. ✅ Create your configuration
+4. ✅ Create **global configuration** at `~/.claude/mcp.json`
 5. ✅ Verify the installation
+
+**Important**: This plugin installs **globally** - the Atlassian tools will be available in **all directories**, not just the plugin directory.
 
 ### Manual Installation
 
@@ -138,17 +140,36 @@ The installation script will:
 3. Give it a name (e.g., "Claude Code")
 4. Copy the generated token
 
-#### 2. Configure the Plugin
+#### 2. Configure the Plugin Globally
+
+Create or edit `~/.claude/mcp.json` with the plugin configuration:
 
 ```bash
-# Copy example configuration
-cp .mcp.json.example .mcp.json
+# Get the plugin directory path
+PLUGIN_DIR="/path/to/atlassian-api-plugin"
 
-# Edit with your credentials
-nano .mcp.json
+# Create/edit global configuration
+nano ~/.claude/mcp.json
+```
+
+Add this configuration (or merge if you have existing MCP servers):
+
+```json
+{
+  "atlassian-api-key": {
+    "command": "node",
+    "args": ["/absolute/path/to/atlassian-api-plugin/mcp-server/index.js"],
+    "env": {
+      "JIRA_URL": "https://your-domain.atlassian.net",
+      "JIRA_EMAIL": "your-email@company.com",
+      "JIRA_API_TOKEN": "your-api-token-here"
+    }
+  }
+}
 ```
 
 Replace these values:
+- `/absolute/path/to/atlassian-api-plugin` → Full path to where you cloned the repo
 - `your-domain.atlassian.net` → Your Atlassian domain
 - `your-email@company.com` → Your Atlassian email
 - `your-api-token-here` → Your API token from step 1
@@ -181,14 +202,12 @@ cd ..
 ### Getting Started
 
 ```bash
-# Navigate to the plugin directory
-cd atlassian-api-plugin
-
-# Start Claude Code
+# Start Claude Code from ANY directory
+cd ~/your-project
 claude
 ```
 
-The plugin loads automatically when Claude Code starts in this directory.
+**The plugin loads automatically** - Atlassian tools are available globally, from any directory.
 
 ### Example Commands
 
@@ -266,13 +285,13 @@ space IN (DEV, DOCS) AND title ~ "deployment"
 
 ### 🔧 Configuration
 
-The plugin uses `.mcp.json` for configuration:
+The plugin uses **global configuration** stored at `~/.claude/mcp.json`:
 
 ```json
 {
   "atlassian-api-key": {
     "command": "node",
-    "args": ["${CLAUDE_PLUGIN_ROOT}/mcp-server/index.js"],
+    "args": ["/absolute/path/to/atlassian-api-plugin/mcp-server/index.js"],
     "env": {
       "JIRA_URL": "https://your-domain.atlassian.net",
       "JIRA_EMAIL": "your-email@company.com",
@@ -281,6 +300,9 @@ The plugin uses `.mcp.json` for configuration:
   }
 }
 ```
+
+**Location**: `~/.claude/mcp.json` (global - works from all directories)
+**Note**: The installation script automatically creates this configuration for you.
 
 ### 🏗️ Architecture
 
