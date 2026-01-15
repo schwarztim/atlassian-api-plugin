@@ -35,22 +35,27 @@ function Write-Fail {
 function Test-Files {
     Write-Test "Checking plugin files"
 
-    if (-not (Test-Path ".claude-plugin/plugin.json")) {
+    $scriptDir = Split-Path -Parent $PSCommandPath
+
+    if (-not (Test-Path (Join-Path $scriptDir ".claude-plugin/plugin.json"))) {
         Write-Fail "Missing .claude-plugin/plugin.json"
         return $false
     }
 
-    if (-not (Test-Path ".mcp.json")) {
-        Write-Fail "Missing .mcp.json - run .\install.ps1 first"
+    # Check for global or local config
+    $globalConfig = Join-Path $env:USERPROFILE ".claude\mcp.json"
+    $localConfig = Join-Path $scriptDir ".mcp.json"
+    if (-not (Test-Path $globalConfig) -and -not (Test-Path $localConfig)) {
+        Write-Fail "Missing configuration - run .\install.ps1 first"
         return $false
     }
 
-    if (-not (Test-Path "mcp-server/index.js")) {
+    if (-not (Test-Path (Join-Path $scriptDir "mcp-server/index.js"))) {
         Write-Fail "Missing mcp-server/index.js"
         return $false
     }
 
-    if (-not (Test-Path "mcp-server/node_modules")) {
+    if (-not (Test-Path (Join-Path $scriptDir "mcp-server/node_modules"))) {
         Write-Fail "Dependencies not installed - run: cd mcp-server; npm install"
         return $false
     }
@@ -63,9 +68,19 @@ function Test-Files {
 function Test-Config {
     Write-Test "Validating configuration"
 
-    $content = Get-Content ".mcp.json" -Raw
+    # Check global config first, then local
+    $globalConfig = Join-Path $env:USERPROFILE ".claude\mcp.json"
+    $localConfig = ".mcp.json"
+    $configPath = if (Test-Path $globalConfig) { $globalConfig } elseif (Test-Path $localConfig) { $localConfig } else { $null }
+
+    if (-not $configPath) {
+        Write-Fail "No configuration file found"
+        return $false
+    }
+
+    $content = Get-Content $configPath -Raw
     if (-not ($content -match "atlassian-api-key")) {
-        Write-Fail "Invalid .mcp.json format"
+        Write-Fail "Invalid configuration format - missing atlassian-api-key"
         return $false
     }
 
@@ -83,16 +98,32 @@ function Test-Config {
     return $true
 }
 
-# Load environment from config
+# Load environment from config (check global first, then local)
 function Get-EnvFromConfig {
-    $config = Get-Content ".mcp.json" | ConvertFrom-Json
-    $env = $config.'atlassian-api-key'.env
+    $globalConfig = Join-Path $env:USERPROFILE ".claude\mcp.json"
+    $localConfig = ".mcp.json"
 
-    if (-not $env.JIRA_URL -or -not $env.JIRA_EMAIL -or -not $env.JIRA_API_TOKEN) {
-        return $null
+    # Try global config first
+    if (Test-Path $globalConfig) {
+        $config = Get-Content $globalConfig | ConvertFrom-Json
+        if ($config.'atlassian-api-key') {
+            $envVars = $config.'atlassian-api-key'.env
+            if ($envVars.JIRA_URL -and $envVars.JIRA_EMAIL -and $envVars.JIRA_API_TOKEN) {
+                return $envVars
+            }
+        }
     }
 
-    return $env
+    # Fall back to local config
+    if (Test-Path $localConfig) {
+        $config = Get-Content $localConfig | ConvertFrom-Json
+        $envVars = $config.'atlassian-api-key'.env
+        if ($envVars.JIRA_URL -and $envVars.JIRA_EMAIL -and $envVars.JIRA_API_TOKEN) {
+            return $envVars
+        }
+    }
+
+    return $null
 }
 
 # Test 3: Test MCP server
@@ -110,10 +141,12 @@ function Test-McpServer {
     $env:JIRA_EMAIL = $envVars.JIRA_EMAIL
     $env:JIRA_API_TOKEN = $envVars.JIRA_API_TOKEN
 
-    # Test tools list
+    # Test tools list (use forward slashes for cross-platform compatibility)
+    $scriptDir = Split-Path -Parent $PSCommandPath
+    $serverPath = Join-Path $scriptDir "mcp-server" | Join-Path -ChildPath "index.js"
     $input = '{"jsonrpc":"2.0","method":"tools/list","params":{},"id":1}'
     try {
-        $output = $input | node mcp-server/index.js 2>$null | Select-Object -Last 1
+        $output = $input | node $serverPath 2>$null | Select-Object -Last 1
 
         if (-not ($output -match "search_jira_issues")) {
             Write-Fail "MCP server not responding correctly"

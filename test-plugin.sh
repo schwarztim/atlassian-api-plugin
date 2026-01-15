@@ -32,26 +32,43 @@ print_fail() {
     echo -e "${RED}  $1${NC}"
 }
 
+# Get script directory (works on macOS and Linux)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+GLOBAL_CONFIG="$HOME/.claude/mcp.json"
+LOCAL_CONFIG="$SCRIPT_DIR/.mcp.json"
+
+# Determine which config file to use
+get_config_file() {
+    if [ -f "$GLOBAL_CONFIG" ] && grep -q "atlassian-api-key" "$GLOBAL_CONFIG" 2>/dev/null; then
+        echo "$GLOBAL_CONFIG"
+    elif [ -f "$LOCAL_CONFIG" ]; then
+        echo "$LOCAL_CONFIG"
+    else
+        echo ""
+    fi
+}
+
 # Test 1: Check files exist
 test_files() {
     print_test "Checking plugin files"
 
-    if [ ! -f ".claude-plugin/plugin.json" ]; then
+    if [ ! -f "$SCRIPT_DIR/.claude-plugin/plugin.json" ]; then
         print_fail "Missing .claude-plugin/plugin.json"
         return 1
     fi
 
-    if [ ! -f ".mcp.json" ]; then
-        print_fail "Missing .mcp.json - run ./install.sh first"
+    CONFIG_FILE=$(get_config_file)
+    if [ -z "$CONFIG_FILE" ]; then
+        print_fail "Missing configuration - run ./install.sh first"
         return 1
     fi
 
-    if [ ! -f "mcp-server/index.js" ]; then
+    if [ ! -f "$SCRIPT_DIR/mcp-server/index.js" ]; then
         print_fail "Missing mcp-server/index.js"
         return 1
     fi
 
-    if [ ! -d "mcp-server/node_modules" ]; then
+    if [ ! -d "$SCRIPT_DIR/mcp-server/node_modules" ]; then
         print_fail "Dependencies not installed - run: cd mcp-server && npm install"
         return 1
     fi
@@ -64,17 +81,23 @@ test_files() {
 test_config() {
     print_test "Validating configuration"
 
-    if ! grep -q "atlassian-api-key" .mcp.json; then
-        print_fail "Invalid .mcp.json format"
+    CONFIG_FILE=$(get_config_file)
+    if [ -z "$CONFIG_FILE" ]; then
+        print_fail "No configuration file found"
         return 1
     fi
 
-    if grep -q "your-domain.atlassian.net" .mcp.json; then
+    if ! grep -q "atlassian-api-key" "$CONFIG_FILE"; then
+        print_fail "Invalid configuration format - missing atlassian-api-key"
+        return 1
+    fi
+
+    if grep -q "your-domain.atlassian.net" "$CONFIG_FILE"; then
         print_fail "Configuration not completed - run ./install.sh"
         return 1
     fi
 
-    if grep -q "your-api-token-here" .mcp.json; then
+    if grep -q "your-api-token-here" "$CONFIG_FILE"; then
         print_fail "API token not configured"
         return 1
     fi
@@ -83,11 +106,16 @@ test_config() {
     return 0
 }
 
-# Test 3: Load environment
+# Test 3: Load environment from config
 load_env() {
-    export JIRA_URL=$(grep JIRA_URL .mcp.json | cut -d'"' -f4)
-    export JIRA_EMAIL=$(grep JIRA_EMAIL .mcp.json | cut -d'"' -f4)
-    export JIRA_API_TOKEN=$(grep JIRA_API_TOKEN .mcp.json | cut -d'"' -f4)
+    CONFIG_FILE=$(get_config_file)
+    if [ -z "$CONFIG_FILE" ]; then
+        return 1
+    fi
+
+    export JIRA_URL=$(grep JIRA_URL "$CONFIG_FILE" | cut -d'"' -f4)
+    export JIRA_EMAIL=$(grep JIRA_EMAIL "$CONFIG_FILE" | cut -d'"' -f4)
+    export JIRA_API_TOKEN=$(grep JIRA_API_TOKEN "$CONFIG_FILE" | cut -d'"' -f4)
 
     if [ -z "$JIRA_URL" ] || [ -z "$JIRA_EMAIL" ] || [ -z "$JIRA_API_TOKEN" ]; then
         return 1
@@ -105,10 +133,10 @@ test_mcp_server() {
         return 1
     fi
 
-    # Test tools list
+    # Test tools list (use absolute path for cross-platform compatibility)
     OUTPUT=$(echo '{"jsonrpc":"2.0","method":"tools/list","params":{},"id":1}' | \
              JIRA_URL="$JIRA_URL" JIRA_EMAIL="$JIRA_EMAIL" JIRA_API_TOKEN="$JIRA_API_TOKEN" \
-             node mcp-server/index.js 2>/dev/null | tail -1)
+             node "$SCRIPT_DIR/mcp-server/index.js" 2>/dev/null | tail -1)
 
     if ! echo "$OUTPUT" | grep -q "search_jira_issues"; then
         print_fail "MCP server not responding correctly"
@@ -165,7 +193,7 @@ test_tool_count() {
 
     TOOL_COUNT=$(echo '{"jsonrpc":"2.0","method":"tools/list","params":{},"id":1}' | \
                  JIRA_URL="$JIRA_URL" JIRA_EMAIL="$JIRA_EMAIL" JIRA_API_TOKEN="$JIRA_API_TOKEN" \
-                 node mcp-server/index.js 2>/dev/null | grep -o '"name":"[^"]*"' | wc -l | tr -d ' ')
+                 node "$SCRIPT_DIR/mcp-server/index.js" 2>/dev/null | grep -o '"name":"[^"]*"' | wc -l | tr -d ' ')
 
     if [ "$TOOL_COUNT" -ne 24 ]; then
         print_fail "Expected 24 tools, found $TOOL_COUNT"

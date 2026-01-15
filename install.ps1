@@ -133,12 +133,15 @@ function Install-Plugin {
         }
 
         # Create global configuration file
-        $mcpServerPath = Join-Path $pluginDir "mcp-server\index.js"
-        $config = @{
-            "atlassian-api-key" = @{
+        # Use forward slashes for cross-platform compatibility
+        $mcpServerPath = (Join-Path $pluginDir "mcp-server" | Join-Path -ChildPath "index.js") -replace '\\', '/'
+
+        # Build config as ordered hashtable to control JSON output
+        $config = [ordered]@{
+            "atlassian-api-key" = [ordered]@{
                 "command" = "node"
                 "args"    = @($mcpServerPath)
-                "env"     = @{
+                "env"     = [ordered]@{
                     "JIRA_URL"       = $jiraUrl
                     "JIRA_EMAIL"     = $jiraEmail
                     "JIRA_API_TOKEN" = $jiraApiTokenPlain
