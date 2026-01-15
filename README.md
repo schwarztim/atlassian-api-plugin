@@ -6,6 +6,7 @@
 [![Node.js Version](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen)](https://nodejs.org/)
 [![MCP SDK](https://img.shields.io/badge/MCP%20SDK-0.5.0-blue)](https://modelcontextprotocol.io/)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+[![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-lightgrey)](https://github.com/schwarztim/atlassian-api-plugin)
 
 **Professional Atlassian integration for Claude Code using API key authentication**
 
@@ -24,6 +25,7 @@ A comprehensive Claude Code plugin that provides **full Jira and Confluence acce
 - ✅ **24 MCP Tools** - Complete Jira (15) + Confluence (9) API coverage
 - ✅ **3 Workflow Skills** - High-level automation for common tasks
 - ✅ **API Key Auth** - Works offline, no browser authentication needed
+- ✅ **Cross-Platform** - macOS, Linux, and Windows support
 - ✅ **Fast & Reliable** - Direct API access without OAuth overhead
 - ✅ **Well Documented** - Comprehensive guides and examples
 - ✅ **Production Ready** - Battle-tested with real workflows
@@ -97,6 +99,7 @@ A comprehensive Claude Code plugin that provides **full Jira and Confluence acce
 
 ### Quick Install
 
+**macOS / Linux:**
 ```bash
 # Clone the repository
 git clone https://github.com/schwarztim/atlassian-api-plugin.git
@@ -104,6 +107,16 @@ cd atlassian-api-plugin
 
 # Run the installation script
 ./install.sh
+```
+
+**Windows (PowerShell):**
+```powershell
+# Clone the repository
+git clone https://github.com/schwarztim/atlassian-api-plugin.git
+cd atlassian-api-plugin
+
+# Run the installation script
+.\install.ps1
 ```
 
 The installation script will:
@@ -149,9 +162,16 @@ npm install
 
 #### 4. Verify Installation
 
+**macOS / Linux:**
 ```bash
 cd ..
 ./test-plugin.sh
+```
+
+**Windows (PowerShell):**
+```powershell
+cd ..
+.\test-plugin.ps1
 ```
 
 </details>
@@ -276,8 +296,10 @@ atlassian-api-plugin/
 │   ├── triage-issue/            # Bug triage workflow
 │   ├── search-jira/             # Jira search patterns
 │   └── search-confluence/       # Confluence search patterns
-├── install.sh                   # Installation script
-├── test-plugin.sh               # Verification script
+├── install.sh                   # Installation script (macOS/Linux)
+├── install.ps1                  # Installation script (Windows)
+├── test-plugin.sh               # Verification script (macOS/Linux)
+├── test-plugin.ps1              # Verification script (Windows)
 └── README.md                    # This file
 ```
 
@@ -381,7 +403,8 @@ npm install
 # Make changes to mcp-server/index.js or skills/
 
 # Test your changes
-./test-plugin.sh
+./test-plugin.sh         # macOS/Linux
+.\test-plugin.ps1        # Windows
 
 # Submit PR
 git checkout -b feature/your-feature

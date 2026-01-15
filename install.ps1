@@ -1,0 +1,178 @@
+# Atlassian API Plugin Installer for Windows
+# Professional installation script for Claude Code plugin
+
+$ErrorActionPreference = "Stop"
+
+# Colors for output
+function Write-Header {
+    Write-Host ""
+    Write-Host "╔════════════════════════════════════════════╗" -ForegroundColor Blue
+    Write-Host "║  Atlassian API Plugin for Claude Code     ║" -ForegroundColor Blue
+    Write-Host "║  Installation Script (Windows)             ║" -ForegroundColor Blue
+    Write-Host "╚════════════════════════════════════════════╝" -ForegroundColor Blue
+    Write-Host ""
+}
+
+function Write-Step {
+    param($Message)
+    Write-Host "▶ $Message" -ForegroundColor Blue
+}
+
+function Write-Success {
+    param($Message)
+    Write-Host "✓ $Message" -ForegroundColor Green
+}
+
+function Write-Error {
+    param($Message)
+    Write-Host "✗ $Message" -ForegroundColor Red
+}
+
+function Write-Warning {
+    param($Message)
+    Write-Host "⚠ $Message" -ForegroundColor Yellow
+}
+
+# Check if command exists
+function Test-Command {
+    param($Command)
+    try {
+        Get-Command $Command -ErrorAction Stop | Out-Null
+        return $true
+    }
+    catch {
+        return $false
+    }
+}
+
+# Main installation
+function Install-Plugin {
+    Write-Header
+
+    # Step 1: Check Node.js
+    Write-Step "Checking Node.js installation..."
+    if (-not (Test-Command "node")) {
+        Write-Error "Node.js is not installed"
+        Write-Host "Please install Node.js v18 or higher from https://nodejs.org/"
+        exit 1
+    }
+
+    $nodeVersion = (node --version) -replace 'v', ''
+    $nodeMajor = [int]($nodeVersion -split '\.')[0]
+    if ($nodeMajor -lt 18) {
+        Write-Error "Node.js version must be 18 or higher (found: v$nodeVersion)"
+        exit 1
+    }
+    Write-Success "Node.js v$nodeVersion detected"
+
+    # Step 2: Install dependencies
+    Write-Step "Installing dependencies..."
+    Push-Location mcp-server
+    try {
+        npm install --silent 2>&1 | Out-Null
+        if ($LASTEXITCODE -eq 0) {
+            Write-Success "Dependencies installed"
+        }
+        else {
+            Write-Error "Failed to install dependencies"
+            exit 1
+        }
+    }
+    finally {
+        Pop-Location
+    }
+
+    # Step 3: Check for existing configuration
+    if (Test-Path ".mcp.json") {
+        Write-Warning "Configuration file .mcp.json already exists"
+        $reply = Read-Host "Do you want to reconfigure? (y/N)"
+        if ($reply -ne 'y' -and $reply -ne 'Y') {
+            Write-Step "Skipping configuration"
+        }
+        else {
+            Remove-Item ".mcp.json"
+        }
+    }
+
+    # Step 4: Create configuration
+    if (-not (Test-Path ".mcp.json")) {
+        Write-Step "Creating configuration..."
+        Write-Host ""
+        Write-Host "You'll need:" -ForegroundColor Yellow
+        Write-Host "  1. Your Atlassian domain (e.g., company.atlassian.net)"
+        Write-Host "  2. Your Atlassian email"
+        Write-Host "  3. An API token from: https://id.atlassian.com/manage-profile/security/api-tokens"
+        Write-Host ""
+
+        # Get Atlassian URL
+        $jiraDomain = Read-Host "Enter your Atlassian domain (without https://)"
+        $jiraUrl = "https://$jiraDomain"
+
+        # Get email
+        $jiraEmail = Read-Host "Enter your Atlassian email"
+
+        # Get API token
+        Write-Host ""
+        Write-Host "Please create an API token:" -ForegroundColor Yellow
+        Write-Host "  1. Visit: https://id.atlassian.com/manage-profile/security/api-tokens"
+        Write-Host "  2. Click 'Create API token'"
+        Write-Host "  3. Give it a name (e.g., 'Claude Code')"
+        Write-Host "  4. Copy the generated token"
+        Write-Host ""
+        $jiraApiToken = Read-Host "Paste your API token" -AsSecureString
+        $jiraApiTokenPlain = [Runtime.InteropServices.Marshal]::PtrToStringAuto(
+            [Runtime.InteropServices.Marshal]::SecureStringToBSTR($jiraApiToken)
+        )
+
+        # Create configuration file
+        $config = @{
+            "atlassian-api-key" = @{
+                "command" = "node"
+                "args"    = @('${CLAUDE_PLUGIN_ROOT}/mcp-server/index.js')
+                "env"     = @{
+                    "JIRA_URL"       = $jiraUrl
+                    "JIRA_EMAIL"     = $jiraEmail
+                    "JIRA_API_TOKEN" = $jiraApiTokenPlain
+                }
+            }
+        } | ConvertTo-Json -Depth 10
+
+        $config | Out-File -FilePath ".mcp.json" -Encoding UTF8
+        Write-Success "Configuration created"
+    }
+
+    # Step 5: Test connection
+    Write-Step "Testing Atlassian API connection..."
+    if (Test-Path ".\test-plugin.ps1") {
+        try {
+            & ".\test-plugin.ps1" | Out-Null
+            Write-Success "Connection test passed"
+        }
+        catch {
+            Write-Warning "Connection test failed - please check your credentials"
+            Write-Host "You can test manually with: .\test-plugin.ps1"
+        }
+    }
+
+    # Step 6: Success message
+    Write-Host ""
+    Write-Host "╔════════════════════════════════════════════╗" -ForegroundColor Green
+    Write-Host "║  Installation Complete! 🎉                 ║" -ForegroundColor Green
+    Write-Host "╚════════════════════════════════════════════╝" -ForegroundColor Green
+    Write-Host ""
+    Write-Host "Next steps:"
+    Write-Host "  1. Start Claude Code in this directory:"
+    Write-Host "     claude" -ForegroundColor Blue
+    Write-Host ""
+    Write-Host "  2. Try some commands:"
+    Write-Host '     "Show me my Jira issues"' -ForegroundColor Blue
+    Write-Host '     "Search Confluence for documentation"' -ForegroundColor Blue
+    Write-Host "     /search-jira my high priority bugs" -ForegroundColor Blue
+    Write-Host ""
+    Write-Host "Documentation: README.md"
+    Write-Host "Test plugin: .\test-plugin.ps1"
+    Write-Host ""
+}
+
+# Run main installation
+Install-Plugin

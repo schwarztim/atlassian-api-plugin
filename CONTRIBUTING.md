@@ -118,6 +118,7 @@ How has this been tested?
 
 ### Setup Steps
 
+**macOS / Linux:**
 ```bash
 # Clone your fork
 git clone https://github.com/YOUR_USERNAME/atlassian-api-plugin.git
@@ -136,6 +137,25 @@ cp .mcp.json.example .mcp.json
 ./test-plugin.sh
 ```
 
+**Windows (PowerShell):**
+```powershell
+# Clone your fork
+git clone https://github.com/YOUR_USERNAME/atlassian-api-plugin.git
+cd atlassian-api-plugin
+
+# Install dependencies
+cd mcp-server
+npm install
+cd ..
+
+# Create your configuration
+Copy-Item .mcp.json.example .mcp.json
+# Edit .mcp.json with your credentials
+
+# Test the plugin
+.\test-plugin.ps1
+```
+
 ### Project Structure
 
 ```
@@ -149,8 +169,10 @@ atlassian-api-plugin/
 │   ├── search-jira/        # Jira search skill
 │   └── search-confluence/  # Confluence search skill
 ├── docs/                    # Additional documentation
-├── install.sh              # Installation script
-├── test-plugin.sh          # Testing script
+├── install.sh              # Installation script (macOS/Linux)
+├── install.ps1             # Installation script (Windows)
+├── test-plugin.sh          # Testing script (macOS/Linux)
+├── test-plugin.ps1         # Testing script (Windows)
 └── README.md               # Main documentation
 ```
 
@@ -237,9 +259,16 @@ node index.js <<< '{"jsonrpc":"2.0","method":"tools/list","params":{},"id":1}'
 
 ### Integration Testing
 
+**macOS / Linux:**
 ```bash
 # Use the test script
 ./test-plugin.sh
+```
+
+**Windows (PowerShell):**
+```powershell
+# Use the test script
+.\test-plugin.ps1
 ```
 
 ## Adding New Features
