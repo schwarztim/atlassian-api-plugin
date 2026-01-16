@@ -83,10 +83,11 @@ function Install-Plugin {
     }
 
     # Step 3: Check for existing global configuration
-    $globalMcpConfig = Join-Path $env:USERPROFILE ".claude\mcp.json"
+    # IMPORTANT: Claude Code reads from user-mcps.json, NOT mcp.json
+    $userMcpsConfig = Join-Path $env:USERPROFILE ".claude\user-mcps.json"
     $pluginDir = Split-Path -Parent $PSCommandPath
 
-    if ((Test-Path $globalMcpConfig) -and (Select-String -Path $globalMcpConfig -Pattern "atlassian-api-key" -Quiet)) {
+    if ((Test-Path $userMcpsConfig) -and (Select-String -Path $userMcpsConfig -Pattern "atlassian-api-key" -Quiet)) {
         Write-Warning "Atlassian plugin already configured globally"
         $reply = Read-Host "Do you want to reconfigure? (y/N)"
         if ($reply -ne 'y' -and $reply -ne 'Y') {
@@ -97,62 +98,93 @@ function Install-Plugin {
     }
 
     # Step 4: Create global configuration
-    if (-not (Test-Path $globalMcpConfig) -or ((Get-Item $globalMcpConfig).Length -eq 0)) {
-        Write-Step "Creating configuration..."
-        Write-Host ""
-        Write-Host "You'll need:" -ForegroundColor Yellow
-        Write-Host "  1. Your Atlassian domain (e.g., company.atlassian.net)"
-        Write-Host "  2. Your Atlassian email"
-        Write-Host "  3. An API token from: https://id.atlassian.com/manage-profile/security/api-tokens"
-        Write-Host ""
+    Write-Step "Creating configuration..."
+    Write-Host ""
+    Write-Host "You'll need:" -ForegroundColor Yellow
+    Write-Host "  1. Your Atlassian domain (e.g., company.atlassian.net)"
+    Write-Host "  2. Your Atlassian email"
+    Write-Host "  3. An API token from: https://id.atlassian.com/manage-profile/security/api-tokens"
+    Write-Host ""
 
-        # Get Atlassian URL
-        $jiraDomain = Read-Host "Enter your Atlassian domain (without https://)"
-        $jiraUrl = "https://$jiraDomain"
+    # Get Atlassian URL
+    $jiraDomain = Read-Host "Enter your Atlassian domain (without https://)"
+    $jiraUrl = "https://$jiraDomain"
 
-        # Get email
-        $jiraEmail = Read-Host "Enter your Atlassian email"
+    # Get email
+    $jiraEmail = Read-Host "Enter your Atlassian email"
 
-        # Get API token
-        Write-Host ""
-        Write-Host "Please create an API token:" -ForegroundColor Yellow
-        Write-Host "  1. Visit: https://id.atlassian.com/manage-profile/security/api-tokens"
-        Write-Host "  2. Click 'Create API token'"
-        Write-Host "  3. Give it a name (e.g., 'Claude Code')"
-        Write-Host "  4. Copy the generated token"
-        Write-Host ""
-        $jiraApiToken = Read-Host "Paste your API token" -AsSecureString
-        $jiraApiTokenPlain = [Runtime.InteropServices.Marshal]::PtrToStringAuto(
-            [Runtime.InteropServices.Marshal]::SecureStringToBSTR($jiraApiToken)
-        )
+    # Get API token
+    Write-Host ""
+    Write-Host "Please create an API token:" -ForegroundColor Yellow
+    Write-Host "  1. Visit: https://id.atlassian.com/manage-profile/security/api-tokens"
+    Write-Host "  2. Click 'Create API token'"
+    Write-Host "  3. Give it a name (e.g., 'Claude Code')"
+    Write-Host "  4. Copy the generated token"
+    Write-Host ""
+    $jiraApiToken = Read-Host "Paste your API token" -AsSecureString
+    $jiraApiTokenPlain = [Runtime.InteropServices.Marshal]::PtrToStringAuto(
+        [Runtime.InteropServices.Marshal]::SecureStringToBSTR($jiraApiToken)
+    )
 
-        # Ensure global config directory exists
-        $configDir = Split-Path -Parent $globalMcpConfig
-        if (-not (Test-Path $configDir)) {
-            New-Item -ItemType Directory -Path $configDir -Force | Out-Null
+    # Ensure global config directory exists
+    $configDir = Split-Path -Parent $userMcpsConfig
+    if (-not (Test-Path $configDir)) {
+        New-Item -ItemType Directory -Path $configDir -Force | Out-Null
+    }
+
+    # Use forward slashes for cross-platform compatibility
+    $mcpServerPath = (Join-Path $pluginDir "mcp-server" | Join-Path -ChildPath "index.js") -replace '\\', '/'
+
+    # Create or update user-mcps.json (the file Claude Code actually reads)
+    if ((Test-Path $userMcpsConfig) -and ((Get-Item $userMcpsConfig).Length -gt 0)) {
+        # Merge with existing config
+        $existingConfig = Get-Content $userMcpsConfig -Raw | ConvertFrom-Json
+
+        # Ensure mcpServers exists
+        if (-not $existingConfig.mcpServers) {
+            $existingConfig | Add-Member -NotePropertyName "mcpServers" -NotePropertyValue ([PSCustomObject]@{})
         }
 
-        # Create global configuration file
-        # Use forward slashes for cross-platform compatibility
-        $mcpServerPath = (Join-Path $pluginDir "mcp-server" | Join-Path -ChildPath "index.js") -replace '\\', '/'
+        # Add or update atlassian-api-key
+        $atlassianConfig = [PSCustomObject][ordered]@{
+            "command" = "node"
+            "args"    = @($mcpServerPath)
+            "env"     = [PSCustomObject][ordered]@{
+                "JIRA_URL"       = $jiraUrl
+                "JIRA_EMAIL"     = $jiraEmail
+                "JIRA_API_TOKEN" = $jiraApiTokenPlain
+            }
+        }
 
-        # Build config as ordered hashtable to control JSON output
+        if ($existingConfig.mcpServers.PSObject.Properties["atlassian-api-key"]) {
+            $existingConfig.mcpServers."atlassian-api-key" = $atlassianConfig
+        } else {
+            $existingConfig.mcpServers | Add-Member -NotePropertyName "atlassian-api-key" -NotePropertyValue $atlassianConfig
+        }
+
+        $existingConfig | ConvertTo-Json -Depth 10 | Out-File -FilePath $userMcpsConfig -Encoding UTF8
+        Write-Success "Added Atlassian to existing user-mcps.json"
+    }
+    else {
+        # Create new user-mcps.json with proper structure
         $config = [ordered]@{
-            "atlassian-api-key" = [ordered]@{
-                "command" = "node"
-                "args"    = @($mcpServerPath)
-                "env"     = [ordered]@{
-                    "JIRA_URL"       = $jiraUrl
-                    "JIRA_EMAIL"     = $jiraEmail
-                    "JIRA_API_TOKEN" = $jiraApiTokenPlain
+            "mcpServers" = [ordered]@{
+                "atlassian-api-key" = [ordered]@{
+                    "command" = "node"
+                    "args"    = @($mcpServerPath)
+                    "env"     = [ordered]@{
+                        "JIRA_URL"       = $jiraUrl
+                        "JIRA_EMAIL"     = $jiraEmail
+                        "JIRA_API_TOKEN" = $jiraApiTokenPlain
+                    }
                 }
             }
         } | ConvertTo-Json -Depth 10
 
-        $config | Out-File -FilePath $globalMcpConfig -Encoding UTF8
-        Write-Success "Global configuration created at ~/.claude/mcp.json"
-        Write-Success "Atlassian tools will be available in ALL directories"
+        $config | Out-File -FilePath $userMcpsConfig -Encoding UTF8
+        Write-Success "Created ~/.claude/user-mcps.json"
     }
+    Write-Success "Atlassian tools will be available in ALL directories"
 
     # Step 5: Test connection
     Write-Step "Testing Atlassian API connection..."
@@ -185,7 +217,7 @@ function Install-Plugin {
     Write-Host '     "Search Confluence for documentation"' -ForegroundColor Blue
     Write-Host "     /search-jira my high priority bugs" -ForegroundColor Blue
     Write-Host ""
-    Write-Host "Configuration: ~/.claude/mcp.json"
+    Write-Host "Configuration: ~/.claude/user-mcps.json"
     Write-Host "Documentation: README.md"
     Write-Host ""
 }

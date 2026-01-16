@@ -73,10 +73,11 @@ main() {
     cd ..
 
     # Step 3: Check for existing global configuration
-    GLOBAL_MCP_CONFIG="$HOME/.claude/mcp.json"
+    # IMPORTANT: Claude Code reads from user-mcps.json, NOT mcp.json
+    USER_MCPS_CONFIG="$HOME/.claude/user-mcps.json"
     PLUGIN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-    if [ -f "$GLOBAL_MCP_CONFIG" ] && grep -q "atlassian-api-key" "$GLOBAL_MCP_CONFIG" 2>/dev/null; then
+    if [ -f "$USER_MCPS_CONFIG" ] && grep -q "atlassian-api-key" "$USER_MCPS_CONFIG" 2>/dev/null; then
         print_warning "Atlassian plugin already configured globally"
         read -p "Do you want to reconfigure? (y/N): " -n 1 -r
         echo
@@ -88,74 +89,85 @@ main() {
     fi
 
     # Step 4: Create global configuration
-    RECONFIGURE=false
-    if [ ! -f "$GLOBAL_MCP_CONFIG" ] || [ ! -s "$GLOBAL_MCP_CONFIG" ]; then
-        print_step "Creating configuration..."
-        echo ""
-        echo -e "${YELLOW}You'll need:${NC}"
-        echo "  1. Your Atlassian domain (e.g., company.atlassian.net)"
-        echo "  2. Your Atlassian email"
-        echo "  3. An API token from: https://id.atlassian.com/manage-profile/security/api-tokens"
-        echo ""
+    # Prompt for credentials if not already configured
+    print_step "Creating configuration..."
+    echo ""
+    echo -e "${YELLOW}You'll need:${NC}"
+    echo "  1. Your Atlassian domain (e.g., company.atlassian.net)"
+    echo "  2. Your Atlassian email"
+    echo "  3. An API token from: https://id.atlassian.com/manage-profile/security/api-tokens"
+    echo ""
 
-        # Get Atlassian URL
-        read -p "Enter your Atlassian domain (without https://): " JIRA_DOMAIN
-        JIRA_URL="https://${JIRA_DOMAIN}"
+    # Get Atlassian URL
+    read -p "Enter your Atlassian domain (without https://): " JIRA_DOMAIN
+    JIRA_URL="https://${JIRA_DOMAIN}"
 
-        # Get email
-        read -p "Enter your Atlassian email: " JIRA_EMAIL
+    # Get email
+    read -p "Enter your Atlassian email: " JIRA_EMAIL
 
-        # Get API token
-        echo ""
-        echo -e "${YELLOW}Please create an API token:${NC}"
-        echo "  1. Visit: https://id.atlassian.com/manage-profile/security/api-tokens"
-        echo "  2. Click 'Create API token'"
-        echo "  3. Give it a name (e.g., 'Claude Code')"
-        echo "  4. Copy the generated token"
-        echo ""
-        read -sp "Paste your API token: " JIRA_API_TOKEN
-        echo ""
+    # Get API token
+    echo ""
+    echo -e "${YELLOW}Please create an API token:${NC}"
+    echo "  1. Visit: https://id.atlassian.com/manage-profile/security/api-tokens"
+    echo "  2. Click 'Create API token'"
+    echo "  3. Give it a name (e.g., 'Claude Code')"
+    echo "  4. Copy the generated token"
+    echo ""
+    read -sp "Paste your API token: " JIRA_API_TOKEN
+    echo ""
 
-        # Ensure global config directory exists
-        mkdir -p "$(dirname "$GLOBAL_MCP_CONFIG")"
+    # Ensure global config directory exists
+    mkdir -p "$(dirname "$USER_MCPS_CONFIG")"
 
-        # Create or update global configuration file
-        if [ -f "$GLOBAL_MCP_CONFIG" ] && [ -s "$GLOBAL_MCP_CONFIG" ]; then
-            # Merge with existing config using jq if available, otherwise manual merge
-            if command_exists jq; then
-                TEMP_CONFIG=$(mktemp)
-                jq --arg path "$PLUGIN_DIR/mcp-server/index.js" \
-                   --arg url "$JIRA_URL" \
-                   --arg email "$JIRA_EMAIL" \
-                   --arg token "$JIRA_API_TOKEN" \
-                   '. + {"atlassian-api-key": {"command": "node", "args": [$path], "env": {"JIRA_URL": $url, "JIRA_EMAIL": $email, "JIRA_API_TOKEN": $token}}}' \
-                   "$GLOBAL_MCP_CONFIG" > "$TEMP_CONFIG"
-                mv "$TEMP_CONFIG" "$GLOBAL_MCP_CONFIG"
-            else
-                # Fallback: backup and warn user
-                cp "$GLOBAL_MCP_CONFIG" "${GLOBAL_MCP_CONFIG}.backup"
-                print_warning "Backed up existing config to ${GLOBAL_MCP_CONFIG}.backup"
-                print_warning "Please manually merge Atlassian config into $GLOBAL_MCP_CONFIG"
-            fi
+    # Create or update user-mcps.json (the file Claude Code actually reads)
+    if [ -f "$USER_MCPS_CONFIG" ] && [ -s "$USER_MCPS_CONFIG" ]; then
+        # Merge with existing config using jq
+        if command_exists jq; then
+            TEMP_CONFIG=$(mktemp)
+            jq --arg path "$PLUGIN_DIR/mcp-server/index.js" \
+               --arg url "$JIRA_URL" \
+               --arg email "$JIRA_EMAIL" \
+               --arg token "$JIRA_API_TOKEN" \
+               '.mcpServers["atlassian-api-key"] = {"command": "node", "args": [$path], "env": {"JIRA_URL": $url, "JIRA_EMAIL": $email, "JIRA_API_TOKEN": $token}}' \
+               "$USER_MCPS_CONFIG" > "$TEMP_CONFIG"
+            mv "$TEMP_CONFIG" "$USER_MCPS_CONFIG"
+            print_success "Added Atlassian to existing user-mcps.json"
         else
-            # Create new global config
-            cat > "$GLOBAL_MCP_CONFIG" << EOF
+            # Fallback: backup and warn user
+            cp "$USER_MCPS_CONFIG" "${USER_MCPS_CONFIG}.backup"
+            print_warning "Backed up existing config to ${USER_MCPS_CONFIG}.backup"
+            print_error "jq is required to merge configs. Please install jq:"
+            echo "  brew install jq  # macOS"
+            echo "  apt install jq   # Ubuntu/Debian"
+            echo ""
+            echo "Then manually add to ~/.claude/user-mcps.json:"
+            echo "  \"atlassian-api-key\": {"
+            echo "    \"command\": \"node\","
+            echo "    \"args\": [\"${PLUGIN_DIR}/mcp-server/index.js\"],"
+            echo "    \"env\": { \"JIRA_URL\": \"...\", \"JIRA_EMAIL\": \"...\", \"JIRA_API_TOKEN\": \"...\" }"
+            echo "  }"
+            exit 1
+        fi
+    else
+        # Create new user-mcps.json with proper structure
+        cat > "$USER_MCPS_CONFIG" << EOF
 {
-  "atlassian-api-key": {
-    "command": "node",
-    "args": ["${PLUGIN_DIR}/mcp-server/index.js"],
-    "env": {
-      "JIRA_URL": "${JIRA_URL}",
-      "JIRA_EMAIL": "${JIRA_EMAIL}",
-      "JIRA_API_TOKEN": "${JIRA_API_TOKEN}"
+  "mcpServers": {
+    "atlassian-api-key": {
+      "command": "node",
+      "args": ["${PLUGIN_DIR}/mcp-server/index.js"],
+      "env": {
+        "JIRA_URL": "${JIRA_URL}",
+        "JIRA_EMAIL": "${JIRA_EMAIL}",
+        "JIRA_API_TOKEN": "${JIRA_API_TOKEN}"
+      }
     }
   }
 }
 EOF
-        fi
-        print_success "Global configuration created at ~/.claude/mcp.json"
-        print_success "Atlassian tools will be available in ALL directories"
+        print_success "Created ~/.claude/user-mcps.json"
     fi
+    print_success "Atlassian tools will be available in ALL directories"
 
     # Step 5: Test connection
     print_step "Testing Atlassian API connection..."
@@ -184,7 +196,7 @@ EOF
     echo -e "     ${BLUE}\"Search Confluence for documentation\"${NC}"
     echo -e "     ${BLUE}/search-jira my high priority bugs${NC}"
     echo ""
-    echo "Configuration: ~/.claude/mcp.json"
+    echo "Configuration: ~/.claude/user-mcps.json"
     echo "Documentation: README.md"
     echo ""
 }

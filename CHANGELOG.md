@@ -5,6 +5,23 @@ All notable changes to the Atlassian API Plugin will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.1] - 2025-01-15
+
+### Fixed
+- **Installation scripts now write to `user-mcps.json`** - Claude Code reads from `~/.claude/user-mcps.json`, not `mcp.json`. Both `install.sh` and `install.ps1` updated to use the correct configuration file.
+
+### Added
+- **Trigger phrase recognition in CLAUDE.md** - Added comprehensive phrase patterns to help Claude recognize when to use Atlassian tools:
+  - "use confluence to..." → Confluence search
+  - "use jira to..." → Jira operations
+  - "check confluence for..." → Confluence search
+  - "search jira for..." → JQL search
+  - Plus many more natural language patterns
+
+### Changed
+- Install scripts now merge with existing `user-mcps.json` using jq (bash) or PowerShell JSON cmdlets
+- Improved error handling when jq is not available
+
 ## [2.0.0] - 2025-01-15
 
 ### Added

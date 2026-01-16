@@ -18,6 +18,67 @@ This plugin provides MCP tools for Atlassian Jira and Confluence with **pre-conf
 
 ---
 
+## Trigger Phrase Recognition
+
+**IMPORTANT:** When users say ANY of these phrases, immediately use the Atlassian MCP tools.
+
+### Confluence Triggers
+Any phrase containing these patterns should use Confluence MCP tools:
+- "use confluence to..." → `search_confluence_by_text` or `get_confluence_page`
+- "search confluence for..." → `search_confluence_by_text`
+- "check confluence for..." → `search_confluence_by_text`
+- "find in confluence..." → `search_confluence_by_text`
+- "look up in confluence..." → `search_confluence_by_text`
+- "confluence documentation about..." → `search_confluence_by_text`
+- "read the confluence page..." → `get_confluence_page` or `get_confluence_page_by_title`
+- "what does confluence say about..." → `search_confluence_by_text`
+- "find documentation for..." → `search_confluence_by_text`
+- "search docs for..." → `search_confluence_by_text`
+- "look in the wiki for..." → `search_confluence_by_text`
+
+### Jira Triggers
+Any phrase containing these patterns should use Jira MCP tools:
+- "use jira to..." → appropriate Jira tool
+- "search jira for..." → `search_jira_issues`
+- "check jira for..." → `search_jira_issues`
+- "find in jira..." → `search_jira_issues`
+- "look up jira issue..." → `get_issue`
+- "my jira tickets" → `get_my_issues`
+- "my issues" → `get_my_issues`
+- "what's assigned to me" → `get_my_issues`
+- "create a jira ticket..." → `create_issue`
+- "create an issue for..." → `create_issue`
+- "update jira issue..." → `update_issue`
+- "move issue to..." → `transition_issue`
+- "add comment to..." → `add_jira_comment`
+
+### Combined/General Triggers
+- "find MCP candidates" + context about tools/documentation → `search_confluence_by_text`
+- "search for [topic] documentation" → `search_confluence_by_text`
+- "find all [topic] in our docs" → `search_confluence_by_text`
+- "what tools do we have for..." → `search_confluence_by_text`
+
+### Example Interpretations
+
+```
+User: "use confluence to search for all cybersecurity tools"
+→ mcp__atlassian-api-key__search_confluence_by_text(query: "cybersecurity tools")
+
+User: "use jira to find bugs assigned to me"
+→ mcp__atlassian-api-key__search_jira_issues(jql: "assignee = currentUser() AND type = Bug")
+
+User: "check confluence for API documentation"
+→ mcp__atlassian-api-key__search_confluence_by_text(query: "API documentation")
+
+User: "search jira for security vulnerabilities"
+→ mcp__atlassian-api-key__search_jira_issues(jql: "text ~ 'security vulnerability'")
+
+User: "find documentation about MCP servers"
+→ mcp__atlassian-api-key__search_confluence_by_text(query: "MCP servers")
+```
+
+---
+
 ## Available MCP Tools
 
 All tools are prefixed with `mcp__atlassian-api-key__`. Use them directly.
