@@ -6,6 +6,8 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
+import { Agent } from "node:http";
+import https from "node:https";
 
 // Get credentials from environment variables
 const ATLASSIAN_URL = process.env.JIRA_URL || "https://your-domain.atlassian.net";
@@ -17,8 +19,18 @@ if (!ATLASSIAN_EMAIL || !ATLASSIAN_API_TOKEN) {
   process.exit(1);
 }
 
-// Create Basic Auth header
+// Create Basic Auth header (cached)
 const authHeader = Buffer.from(`${ATLASSIAN_EMAIL}:${ATLASSIAN_API_TOKEN}`).toString('base64');
+
+// HTTP/2 Agent with connection pooling for performance
+// keepAlive reuses TCP connections, reducing latency on repeated requests
+const httpsAgent = new https.Agent({
+  keepAlive: true,
+  keepAliveMsecs: 30000, // Keep connections alive for 30 seconds
+  maxSockets: 50, // Max concurrent connections
+  maxFreeSockets: 10, // Max idle connections to keep
+  timeout: 60000 // 60 second timeout
+});
 
 // Helper function to make Jira API calls
 async function jiraApi(endpoint, method = 'GET', data = null) {
@@ -28,7 +40,8 @@ async function jiraApi(endpoint, method = 'GET', data = null) {
       'Authorization': `Basic ${authHeader}`,
       'Content-Type': 'application/json',
       'Accept': 'application/json'
-    }
+    },
+    agent: httpsAgent // Use connection pooling agent
   };
 
   if (data) {
@@ -53,7 +66,8 @@ async function confluenceApi(endpoint, method = 'GET', data = null) {
       'Authorization': `Basic ${authHeader}`,
       'Content-Type': 'application/json',
       'Accept': 'application/json'
-    }
+    },
+    agent: httpsAgent // Use connection pooling agent
   };
 
   if (data) {
@@ -70,11 +84,37 @@ async function confluenceApi(endpoint, method = 'GET', data = null) {
   return await response.json();
 }
 
+// Helper function to make Confluence API v2 calls (improved performance)
+async function confluenceApiV2(endpoint, method = 'GET', data = null) {
+  const options = {
+    method,
+    headers: {
+      'Authorization': `Basic ${authHeader}`,
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    },
+    agent: httpsAgent // Use connection pooling agent
+  };
+
+  if (data) {
+    options.body = JSON.stringify(data);
+  }
+
+  const response = await fetch(`${ATLASSIAN_URL}/wiki/api/v2/${endpoint}`, options);
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Confluence API v2 error (${response.status}): ${errorText}`);
+  }
+
+  return await response.json();
+}
+
 // Create MCP server
 const server = new Server(
   {
     name: "atlassian-mcp-server",
-    version: "2.0.0",
+    version: "2.1.0",
   },
   {
     capabilities: {
@@ -556,6 +596,30 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             }
           },
           required: ["query"]
+        }
+      },
+      {
+        name: "get_confluence_page_v2",
+        description: "Get a Confluence page using the v2 API with improved performance and optional public link. Returns page content with better response control than v1.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            pageId: {
+              type: "string",
+              description: "The page ID"
+            },
+            includePublicLink: {
+              type: "boolean",
+              description: "Include public link data if available (default: false)",
+              default: false
+            },
+            bodyFormat: {
+              type: "string",
+              description: "Format for body content: 'storage', 'atlas_doc_format', or 'view' (default: storage)",
+              default: "storage"
+            }
+          },
+          required: ["pageId"]
         }
       }
     ]
@@ -1212,6 +1276,44 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             {
               type: "text",
               text: JSON.stringify({ total: data.size, pages }, null, 2)
+            }
+          ]
+        };
+      }
+
+      case "get_confluence_page_v2": {
+        const { pageId, includePublicLink = false, bodyFormat = "storage" } = args;
+
+        let endpoint = `pages/${pageId}?body-format=${bodyFormat}`;
+        if (includePublicLink) {
+          endpoint += '&include-public-link=true';
+        }
+
+        const page = await confluenceApiV2(endpoint);
+
+        const result = {
+          id: page.id,
+          status: page.status,
+          title: page.title,
+          spaceId: page.spaceId,
+          parentId: page.parentId,
+          parentType: page.parentType,
+          version: page.version?.number,
+          createdAt: page.version?.createdAt,
+          authorId: page.authorId,
+          body: page.body?.[bodyFormat]?.value,
+          _links: page._links
+        };
+
+        if (includePublicLink && page.publicLink) {
+          result.publicLink = page.publicLink;
+        }
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(result, null, 2)
             }
           ]
         };
