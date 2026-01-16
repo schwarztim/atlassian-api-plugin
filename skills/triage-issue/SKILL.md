@@ -1,9 +1,21 @@
 ---
 name: triage-issue
-description: "Intelligently triage bug reports and error messages by searching for duplicates in Jira and offering to create new issues or add comments to existing ones. Searches Jira for similar issues, identifies duplicates, checks fix history, and helps create well-structured bug reports."
+description: "Intelligently triage bug reports and error messages using MCP tools. Search for duplicates in Jira and offer to create new issues or add comments to existing ones. ALWAYS use MCP tools, NEVER use curl or WebFetch."
 ---
 
 # Triage Issue
+
+## CRITICAL: Use MCP Tools Only
+
+**NEVER use curl, WebFetch, or Bash for Jira.** Authentication is pre-configured.
+
+Use these MCP tools:
+- `mcp__atlassian-api-key__search_jira_issues` - Search for duplicates
+- `mcp__atlassian-api-key__get_issue` - Get issue details
+- `mcp__atlassian-api-key__create_issue` - Create new issue
+- `mcp__atlassian-api-key__add_jira_comment` - Add comment to existing
+
+---
 
 ## Keywords
 triage bug, check duplicate, is this a duplicate, search for similar issues, create bug ticket, file a bug, report this error, triage this error, bug report, error message, similar issues, duplicate bug

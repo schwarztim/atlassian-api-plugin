@@ -1,9 +1,22 @@
 ---
 name: search-confluence
-description: "Search and access Confluence documentation. Find pages by title, search content, list spaces, and retrieve page content. Use when looking for documentation, internal wiki pages, process guides, or any company knowledge in Confluence."
+description: "Search and access Confluence documentation using MCP tools. Find pages by title, search content, list spaces, and retrieve page content. Use when looking for documentation, internal wiki pages, process guides, or any company knowledge in Confluence. ALWAYS use MCP tools, NEVER use curl or WebFetch."
 ---
 
 # Search Confluence
+
+## CRITICAL: Use MCP Tools Only
+
+**NEVER use curl, WebFetch, or Bash for Confluence.** Authentication is pre-configured in the MCP server.
+
+All tool names start with `mcp__atlassian-api-key__`:
+- `mcp__atlassian-api-key__search_confluence`
+- `mcp__atlassian-api-key__search_confluence_by_text`
+- `mcp__atlassian-api-key__get_confluence_page`
+- `mcp__atlassian-api-key__get_confluence_page_by_title`
+- etc.
+
+---
 
 ## Keywords
 search confluence, find documentation, find pages, wiki search, confluence pages, documentation search, internal docs, search docs, find in confluence, knowledge base, company wiki

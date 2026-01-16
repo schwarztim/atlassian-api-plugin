@@ -1,105 +1,145 @@
 # Atlassian API Plugin for Claude Code
 
-## IMPORTANT: Use MCP Tools, NOT curl/fetch
+## CRITICAL RULE: USE MCP TOOLS ONLY
 
-This plugin provides MCP tools for Atlassian Jira and Confluence. **ALWAYS use these tools instead of curl, fetch, or WebFetch for any Atlassian operations.**
+This plugin provides MCP tools for Atlassian Jira and Confluence with **pre-configured authentication**.
+
+### NEVER DO THESE THINGS:
+- **NEVER** use `curl` for Atlassian APIs
+- **NEVER** use `WebFetch` for Atlassian URLs
+- **NEVER** use the Bash tool to call Atlassian APIs
+- **NEVER** ask the user for API tokens or credentials
+- **NEVER** attempt OAuth flows for Atlassian
+- **NEVER** use `fetch()` or HTTP requests manually
+- **NEVER** suggest the user needs to "authenticate first"
+
+### ALWAYS DO THIS:
+- **ALWAYS** use the MCP tools listed below - authentication is automatic
+
+---
 
 ## Available MCP Tools
 
-### Confluence Tools (USE THESE for wiki/documentation)
-- `search_confluence` - Search Confluence using CQL queries
-- `search_confluence_by_text` - Simple text search in Confluence
-- `get_confluence_page` - Get a page by ID
-- `get_confluence_page_by_title` - Get a page by title and space
-- `create_confluence_page` - Create a new page
-- `update_confluence_page` - Update an existing page
-- `get_confluence_spaces` - List all spaces
-- `get_confluence_space` - Get space details
-- `add_confluence_comment` - Add a comment to a page
+All tools are prefixed with `mcp__atlassian-api-key__`. Use them directly.
 
-### Jira Tools (USE THESE for issues/projects)
-- `search_jira_issues` - Search using JQL
-- `get_issue` - Get issue details
-- `create_issue` - Create a new issue
-- `update_issue` - Update an issue
-- `add_jira_comment` - Add a comment
-- `get_transitions` - Get available transitions
-- `transition_issue` - Move issue through workflow
-- `get_projects` - List all projects
-- `get_project` - Get project details
-- `get_current_user` - Get current user info
-- `get_my_issues` - Get issues assigned to current user
-- `get_in_progress_issues` - Get in-progress issues
-- `get_recent_issues` - Get recently updated issues
-- `assign_issue` - Assign an issue
-- `search_users` - Search for users
+### Jira Tools
+| Tool Name | Description |
+|-----------|-------------|
+| `mcp__atlassian-api-key__search_jira_issues` | Search issues using JQL |
+| `mcp__atlassian-api-key__get_issue` | Get issue by key (e.g., CSA-917) |
+| `mcp__atlassian-api-key__create_issue` | Create a new issue |
+| `mcp__atlassian-api-key__update_issue` | Update an existing issue |
+| `mcp__atlassian-api-key__add_jira_comment` | Add a comment to an issue |
+| `mcp__atlassian-api-key__get_transitions` | Get available workflow transitions |
+| `mcp__atlassian-api-key__transition_issue` | Move issue to new status |
+| `mcp__atlassian-api-key__get_projects` | List all projects |
+| `mcp__atlassian-api-key__get_project` | Get project details |
+| `mcp__atlassian-api-key__get_current_user` | Get current user info |
+| `mcp__atlassian-api-key__get_my_issues` | Get issues assigned to current user |
+| `mcp__atlassian-api-key__get_in_progress_issues` | Get in-progress issues |
+| `mcp__atlassian-api-key__get_recent_issues` | Get recently updated issues |
+| `mcp__atlassian-api-key__assign_issue` | Assign an issue to a user |
+| `mcp__atlassian-api-key__search_users` | Search for users |
 
-## When User Asks About Confluence/Wiki
+### Confluence Tools
+| Tool Name | Description |
+|-----------|-------------|
+| `mcp__atlassian-api-key__search_confluence` | Search using CQL |
+| `mcp__atlassian-api-key__search_confluence_by_text` | Simple text search |
+| `mcp__atlassian-api-key__get_confluence_page` | Get page by ID |
+| `mcp__atlassian-api-key__get_confluence_page_by_title` | Get page by title and space |
+| `mcp__atlassian-api-key__create_confluence_page` | Create a new page |
+| `mcp__atlassian-api-key__update_confluence_page` | Update an existing page |
+| `mcp__atlassian-api-key__get_confluence_spaces` | List all spaces |
+| `mcp__atlassian-api-key__get_confluence_space` | Get space details |
+| `mcp__atlassian-api-key__add_confluence_comment` | Add a comment to a page |
 
-If the user mentions:
-- Confluence, wiki, documentation, pages, spaces
-- URLs containing `atlassian.net/wiki`
-- Creating, reading, or updating documentation
+---
 
-**ALWAYS use the Confluence MCP tools above. NEVER use WebFetch or curl.**
+## URL Pattern Recognition
 
-## When User Asks About Jira
+When you see these URL patterns, use MCP tools:
 
-If the user mentions:
-- Jira, issues, tickets, bugs, stories, epics
-- URLs containing `atlassian.net/browse` or `atlassian.net/jira`
-- Creating, searching, or updating issues
+| URL Pattern | Action |
+|-------------|--------|
+| `*.atlassian.net/browse/XXX-123` | Use `get_issue` with issueKey |
+| `*.atlassian.net/jira/*` | Use Jira MCP tools |
+| `*.atlassian.net/wiki/spaces/*/pages/12345/*` | Use `get_confluence_page` with pageId |
+| `*.atlassian.net/wiki/*` | Use Confluence MCP tools |
 
-**ALWAYS use the Jira MCP tools above. NEVER use WebFetch or curl.**
+### Examples
 
-## Example Usage Patterns
-
-### Reading a Confluence Page
 ```
-User: "Look at https://qurate.atlassian.net/wiki/spaces/SARC/pages/248414685/CSSM+-+Web+Security"
-DO: Use get_confluence_page with ID 248414685
-DON'T: Use WebFetch or curl
-```
+User: "Look at https://qurate.atlassian.net/browse/CSA-917"
+→ Use mcp__atlassian-api-key__get_issue with issueKey: "CSA-917"
 
-### Creating a Confluence Page
-```
-User: "Create a page in the SARC space"
-DO: Use create_confluence_page with spaceKey "SARC"
-DON'T: Use curl with the Confluence API
-```
+User: "Read https://qurate.atlassian.net/wiki/spaces/SARC/pages/248414685/Security"
+→ Use mcp__atlassian-api-key__get_confluence_page with pageId: "248414685"
 
-### Searching Confluence
-```
-User: "Find all pages about security"
-DO: Use search_confluence with query 'text ~ "security"'
-DON'T: Use WebFetch to search
-```
-
-### Getting Jira Issues
-```
 User: "Show me my Jira issues"
-DO: Use get_my_issues or search_jira_issues
-DON'T: Use curl with the Jira API
+→ Use mcp__atlassian-api-key__get_my_issues
+
+User: "Find documentation about API"
+→ Use mcp__atlassian-api-key__search_confluence_by_text with query: "API"
 ```
+
+---
 
 ## Authentication
 
-Authentication is handled automatically by the MCP server. You do NOT need to:
-- Pass API tokens
-- Use curl with -u flags
-- Handle base64 encoding
-- Manage auth headers
+**Authentication is 100% automatic.** The MCP server has pre-configured credentials.
 
-The MCP tools handle all authentication transparently.
+DO NOT:
+- Ask for API tokens
+- Suggest OAuth authentication
+- Write curl commands with -u flags
+- Attempt to configure authentication
+- Tell the user they need to log in
 
-## Performance
+The credentials are already configured in the MCP server.
 
-MCP tools are:
-- Faster than curl (no shell spawning overhead)
-- More reliable (proper error handling)
-- Authenticated automatically
-- Type-safe with proper JSON parsing
+---
 
-## Critical Rule
+## Quick Reference
 
-**If you find yourself writing curl commands or using WebFetch for Atlassian URLs, STOP and use the MCP tools instead.**
+### "Show me issue X" or "Get CSA-123"
+```
+mcp__atlassian-api-key__get_issue(issueKey: "CSA-123")
+```
+
+### "Find issues about X" or "Search for bugs"
+```
+mcp__atlassian-api-key__search_jira_issues(jql: "text ~ 'X' AND type=Bug")
+```
+
+### "What are my issues?" or "My tickets"
+```
+mcp__atlassian-api-key__get_my_issues()
+```
+
+### "Read this Confluence page" (with URL containing page ID)
+```
+mcp__atlassian-api-key__get_confluence_page(pageId: "extracted-from-url")
+```
+
+### "Find documentation about X"
+```
+mcp__atlassian-api-key__search_confluence_by_text(query: "X")
+```
+
+### "Create a Jira issue"
+```
+mcp__atlassian-api-key__create_issue(project: "PROJ", issueType: "Bug", summary: "Title")
+```
+
+---
+
+## Reminder
+
+If you catch yourself thinking about:
+- Writing a curl command → STOP, use MCP tool
+- Using WebFetch for atlassian.net → STOP, use MCP tool
+- Asking for credentials → STOP, authentication is automatic
+- OAuth/login flows → STOP, already authenticated
+
+**The MCP tools are the ONLY correct way to interact with Atlassian.**

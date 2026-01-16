@@ -1,9 +1,21 @@
 ---
 name: search-jira
-description: "Advanced Jira search and issue management. Search across projects using JQL, find issues by various criteria, and get detailed information. Use when you need to find specific issues, search by status/assignee/priority, or explore project contents."
+description: "Advanced Jira search and issue management using MCP tools. Search across projects using JQL, find issues by various criteria, and get detailed information. Use when you need to find specific issues, search by status/assignee/priority, or explore project contents. ALWAYS use MCP tools, NEVER use curl or WebFetch."
 ---
 
 # Search Jira
+
+## CRITICAL: Use MCP Tools Only
+
+**NEVER use curl, WebFetch, or Bash for Jira.** Authentication is pre-configured in the MCP server.
+
+All tool names start with `mcp__atlassian-api-key__`:
+- `mcp__atlassian-api-key__search_jira_issues`
+- `mcp__atlassian-api-key__get_issue`
+- `mcp__atlassian-api-key__get_my_issues`
+- etc.
+
+---
 
 ## Keywords
 search jira, find issues, search issues, find tickets, jira query, look up issues, find bugs, search project, my issues, assigned to me, in progress issues

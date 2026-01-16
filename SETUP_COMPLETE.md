@@ -8,16 +8,18 @@ Your Atlassian plugin is now configured and ready to use.
 ```
 AtlassianPlugin/
 ├── .claude-plugin/
-│   └── plugin.json          ✅ Plugin metadata
+│   ├── plugin.json          ✅ Plugin metadata
+│   └── hooks/               ✅ Safety hooks for API guidance
 ├── .mcp.json                ✅ MCP configuration with your credentials
 ├── .gitignore               ✅ Protects your API token
 ├── mcp-server/
-│   ├── index.js             ✅ Enhanced MCP server with 15+ tools
+│   ├── index.js             ✅ MCP server with 24 tools (Jira + Confluence)
 │   ├── package.json         ✅ Dependencies
 │   └── node_modules/        ✅ Installed packages
 ├── skills/
 │   ├── triage-issue/        ✅ Bug triage workflow
-│   └── search-jira/         ✅ Advanced search patterns
+│   ├── search-jira/         ✅ Advanced Jira search patterns
+│   └── search-confluence/   ✅ Confluence documentation search
 └── README.md                ✅ Complete documentation
 ```
 
@@ -27,12 +29,14 @@ AtlassianPlugin/
 - ✅ API Token: Configured in .mcp.json
 - ✅ Global mcp.json cleaned up (old config removed)
 
-### Available Tools (15 total)
+### Available Tools (24 total)
+
+**Jira Tools (15):**
 1. **search_jira_issues** - Advanced JQL search
 2. **get_issue** - Full issue details
 3. **create_issue** - Create new issues
 4. **update_issue** - Update existing issues
-5. **add_comment** - Add comments
+5. **add_jira_comment** - Add comments to issues
 6. **get_transitions** - View workflow states
 7. **transition_issue** - Move through workflow
 8. **get_projects** - List all projects
@@ -44,9 +48,21 @@ AtlassianPlugin/
 14. **assign_issue** - Assign to users
 15. **search_users** - Find users by name/email
 
-### Available Skills (2 total)
+**Confluence Tools (9):**
+16. **search_confluence** - CQL search
+17. **search_confluence_by_text** - Simple text search
+18. **get_confluence_page** - Get page by ID
+19. **get_confluence_page_by_title** - Get page by title and space
+20. **create_confluence_page** - Create new pages
+21. **update_confluence_page** - Update existing pages
+22. **add_confluence_comment** - Add comments to pages
+23. **get_confluence_spaces** - List all spaces
+24. **get_confluence_space** - Space details
+
+### Available Skills (3 total)
 1. **/triage-issue** - Intelligent bug triage with duplicate detection
-2. **/search-jira** - Advanced search with JQL examples
+2. **/search-jira** - Advanced Jira search with JQL examples
+3. **/search-confluence** - Confluence documentation search
 
 ## How to Use
 
@@ -71,6 +87,8 @@ Try these commands in Claude Code:
 "What projects do I have access to?"
 "/triage-issue Check if this is a duplicate: Connection timeout in login"
 "/search-jira my in-progress issues"
+"Search Confluence for API documentation"
+"/search-confluence security policies"
 ```
 
 ## Next Steps
@@ -86,7 +104,9 @@ Then ask: **"Show me my Jira issues"**
 ### 2. Try Skills
 Type: **`/triage-issue`** to see the bug triage workflow
 
-Type: **`/search-jira`** to see search examples
+Type: **`/search-jira`** to see Jira search examples
+
+Type: **`/search-confluence`** to search documentation
 
 ### 3. Explore Projects
 Ask: **"What Jira projects do I have access to?"**
@@ -107,8 +127,8 @@ Ask: **"Create a test bug in project CSA"**
 | Feature | This Plugin (API Key) | Official (OAuth) |
 |---------|----------------------|------------------|
 | Setup | ✅ Edit config file | ⚠️ Browser OAuth flow |
-| Jira | ✅ Full access | ✅ Full access |
-| Confluence | ❌ Not yet | ✅ Yes |
+| Jira | ✅ Full access (15 tools) | ✅ Full access |
+| Confluence | ✅ Full access (9 tools) | ✅ Yes |
 | Compass | ❌ Not yet | ✅ Yes |
 | Works Offline | ✅ Always | ⚠️ Needs reauth |
 | Enterprise SSO | ⚠️ API token only | ✅ Supported |

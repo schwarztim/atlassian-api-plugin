@@ -1,9 +1,37 @@
 {
   "name": "atlassian-api",
-  "version": "1.0.0",
-  "description": "Connect to Atlassian products (Jira, Confluence) using API key authentication. Search and create issues, access documentation, manage sprints, and integrate your development workflow with Atlassian's collaboration tools.",
+  "version": "2.0.0",
+  "description": "Connect to Atlassian products (Jira, Confluence) using pre-authenticated MCP tools. Search and create issues, access documentation, manage sprints, and integrate your development workflow with Atlassian's collaboration tools. Authentication is automatic - never use curl or WebFetch.",
   "author": {
     "name": "Timothy Schwarz",
     "email": "timothy.schwarz@qvc.com"
-  }
+  },
+  "hooks": [
+    {
+      "event": "PreToolUse",
+      "path": "${CLAUDE_PLUGIN_ROOT}/.claude-plugin/hooks/block-atlassian-bash.md",
+      "type": "prompt",
+      "matcher": {
+        "tool_name": "Bash",
+        "command_pattern": "atlassian|jira|confluence"
+      }
+    },
+    {
+      "event": "PreToolUse",
+      "path": "${CLAUDE_PLUGIN_ROOT}/.claude-plugin/hooks/block-atlassian-webfetch.md",
+      "type": "prompt",
+      "matcher": {
+        "tool_name": "WebFetch",
+        "input_contains": "atlassian.net"
+      }
+    },
+    {
+      "event": "UserPromptSubmit",
+      "path": "${CLAUDE_PLUGIN_ROOT}/.claude-plugin/hooks/atlassian-reminder.md",
+      "type": "prompt",
+      "matcher": {
+        "prompt_pattern": "(?i)(atlassian|jira|confluence|\\.atlassian\\.net|/browse/|/wiki/)"
+      }
+    }
+  ]
 }
