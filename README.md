@@ -23,7 +23,7 @@ A comprehensive Claude Code plugin that provides **full Jira and Confluence acce
 ### Why This Plugin?
 
 - ✅ **24 MCP Tools** - Complete Jira (15) + Confluence (9) API coverage
-- ✅ **3 Workflow Skills** - High-level automation for common tasks
+- ✅ **5 Workflow Skills** - High-level automation for common tasks including intelligent daily workflow
 - ✅ **API Key Auth** - Works offline, no browser authentication needed
 - ✅ **Cross-Platform** - macOS, Linux, and Windows support
 - ✅ **Fast & Reliable** - Direct API access without OAuth overhead
@@ -82,7 +82,19 @@ A comprehensive Claude Code plugin that provides **full Jira and Confluence acce
 
 </details>
 
-### 🚀 Skills (3 total)
+### 🚀 Skills (5 total)
+
+- **`workflow`** - **NEW!** Daily workflow dashboard with intelligent response drafting
+  - Auto-detects tickets needing your response (prevents false positives)
+  - Researches using Confluence, Teams, web, and all available MCPs
+  - Proposes responses inline with yay/nay approval
+  - Handles deprecated Jira search API gracefully
+
+- **`jiraupdate`** - Research and draft Jira responses with approval workflow
+  - Analyzes ticket context and latest activity
+  - Multi-source research (Confluence, Akamai, web, etc.)
+  - Shows proposed response with sources
+  - Requires explicit "yay" approval before posting
 
 - **`/triage-issue`** - Intelligent bug triage with duplicate detection
 - **`/search-jira`** - Advanced Jira search with JQL examples
@@ -229,6 +241,17 @@ claude
 
 **Skills:**
 ```
+# Daily workflow with intelligent response proposals
+"workflow"
+→ Shows tickets needing response with auto-drafted replies
+→ Reply "yay 1" to post, "nay 1" to skip, "edit 1" to revise
+
+# Manual ticket response research
+"jiraupdate CSA-123"
+→ Researches ticket and drafts response with sources
+→ Waits for your approval before posting
+
+# Other skills
 /triage-issue Connection timeout in authentication
 /search-jira my high priority bugs
 /search-confluence deployment guide
@@ -315,6 +338,8 @@ atlassian-api-plugin/
 │   ├── package.json             # Dependencies
 │   └── node_modules/            # Installed packages
 ├── skills/
+│   ├── workflow/                # NEW! Daily workflow dashboard
+│   ├── jiraupdate/              # NEW! Ticket response automation
 │   ├── triage-issue/            # Bug triage workflow
 │   ├── search-jira/             # Jira search patterns
 │   └── search-confluence/       # Confluence search patterns
@@ -336,7 +361,9 @@ atlassian-api-plugin/
 | **Compass Access** | ❌ No | ✅ Yes |
 | **Offline Use** | ✅ Always works | ⚠️ Needs reauth |
 | **Enterprise SSO** | ⚠️ API token | ✅ Supported |
+| **Intelligent Workflow** | ✅ Auto-draft responses | ❌ No |
 | **Total Tools** | **24** | ~20+ |
+| **Total Skills** | **5** | ~3 |
 
 ## Troubleshooting
 

@@ -1,6 +1,6 @@
 {
   "name": "atlassian-api",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Connect to Atlassian products (Jira, Confluence) using pre-authenticated MCP tools. Search and create issues, access documentation, manage sprints, and integrate your development workflow with Atlassian's collaboration tools. Authentication is automatic - never use curl or WebFetch.",
   "author": {
     "name": "Timothy Schwarz",
