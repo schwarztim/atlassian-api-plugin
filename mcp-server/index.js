@@ -636,7 +636,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       case "search_jira_issues": {
         const { jql, fields = ["key", "summary", "status", "priority", "assignee", "updated"], maxResults = 50 } = args;
 
-        const data = await jiraApi('search', 'POST', {
+        const data = await jiraApi('search/jql', 'POST', {
           jql,
           fields,
           maxResults
@@ -910,7 +910,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         }
         jql += " ORDER BY priority DESC, updated DESC";
 
-        const data = await jiraApi('search', 'POST', {
+        const data = await jiraApi('search/jql', 'POST', {
           jql,
           fields: ["key", "summary", "status", "priority", "updated", "assignee"],
           maxResults
@@ -937,7 +937,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       case "get_in_progress_issues": {
         const maxResults = args.maxResults || 50;
 
-        const data = await jiraApi('search', 'POST', {
+        const data = await jiraApi('search/jql', 'POST', {
           jql: 'assignee=currentUser() AND status IN ("In Progress", "In Development") ORDER BY priority DESC',
           fields: ["key", "summary", "status", "priority"],
           maxResults
@@ -964,7 +964,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const days = args.days || 7;
         const maxResults = args.maxResults || 50;
 
-        const data = await jiraApi('search', 'POST', {
+        const data = await jiraApi('search/jql', 'POST', {
           jql: `assignee=currentUser() AND updated >= -${days}d ORDER BY updated DESC`,
           fields: ["key", "summary", "status", "updated"],
           maxResults
